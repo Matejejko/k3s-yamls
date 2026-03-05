@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vintage-story
+spec:
+  serviceName: vintage-story
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vintage-story
+  template:
+    metadata:
+      labels:
+        app: vintage-story
+    spec:
+      containers:
+      - name: vintage-story
+        image: zsuatem/vintagestory:1.21.6
+        ports:
+        - containerPort: 42420
+        resources:
+          requests:
+            cpu: "3"
+            memory: "6Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+        - name: world-data
+          mountPath: /vintagestory/data
+      volumes:
+      - name: world-data
+        persistentVolumeClaim:
+          claimName: vintage-story-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vintage-story
+spec:
+  type: NodePort
+  selector:
+    app: vintage-story
+  ports:
+    - port: 42420
+      targetPort: 42420
+      nodePort: 32420

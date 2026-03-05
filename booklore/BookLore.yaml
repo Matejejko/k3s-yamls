@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booklore
+  namespace: booklore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booklore
+  template:
+    metadata:
+      labels:
+        app: booklore
+    spec:
+      containers:
+        - name: booklore
+          image: booklore/booklore:latest
+          env:
+            - name: USER_ID
+              value: "0"
+            - name: GROUP_ID
+              value: "0"
+            - name: TZ
+              value: Europe/Bratislava
+            - name: DATABASE_URL
+              value: jdbc:mariadb://mariadb.booklore.svc.cluster.local:3306/booklore
+            - name: DATABASE_USERNAME
+              value: booklore
+            - name: DATABASE_PASSWORD
+              value: Pa$$w0rd 
+            - name: BOOKLORE_PORT
+              value: "6060"
+          ports:
+            - containerPort: 6060
+          volumeMounts:
+            - mountPath: /app/data
+              name: data
+            - mountPath: /books
+              name: books
+            - mountPath: /bookdrop
+              name: bookdrop
+      volumes:
+        - name: data
+          hostPath:
+            path: /services/booklore/data
+            type: DirectoryOrCreate
+        - name: books
+          hostPath:
+            path: /services/booklore/books
+            type: DirectoryOrCreate
+        - name: bookdrop
+          hostPath:
+            path: /services/booklore/bookdrop
+            type: DirectoryOrCreate
+

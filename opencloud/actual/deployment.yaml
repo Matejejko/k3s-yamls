@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: opencloud
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencloud
+  namespace: opencloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opencloud
+  template:
+    metadata:
+      labels:
+        app: opencloud
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: opencloud
+        image: opencloudeu/opencloud-rolling
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9200
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            opencloud init --insecure true || true;
+            opencloud server
+        env:
+          - name: IDM_CREATE_DEMO_USERS
+            value: "true"
+          - name: OC_INSECURE
+            value: "true"
+          - name: OC_URL
+            # Changed to a subdomain to avoid conflict with Rancher UI
+            value: "https://oc.192.168.0.101.sslip.io"
+        volumeMounts:
+          - name: opencloud-data
+            mountPath: /var/lib/opencloud
+          - name: opencloud-config
+            mountPath: /etc/opencloud
+      volumes:
+      - name: opencloud-data
+        hostPath:
+          # Changed paths slightly to avoid data conflict with the old instance
+          path: /services/opencloud/data
+          type: DirectoryOrCreate
+      - name: opencloud-config
+        hostPath:
+          path: /services/opencloud/config
+          type: DirectoryOrCreate
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencloud
+  namespace: opencloud
+spec:
+  selector:
+    app: opencloud
+  ports:
+    - port: 9200
+      targetPort: 9200
+
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: opencloud-transport
+  namespace: opencloud
+spec:
+  insecureSkipVerify: true
+
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: opencloud-headers
+  namespace: opencloud
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+      Host: "oc.192.168.0.101.sslip.io"
+
+---
+
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: opencloud-ingressroute
+  namespace: opencloud
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`oc.192.168.0.101.sslip.io`)
+    kind: Rule
+    middlewares:
+      - name: opencloud-headers
+    services:
+      - name: opencloud
+        port: 9200
+        scheme: https
+        serversTransport: opencloud-transport
+  tls: {}

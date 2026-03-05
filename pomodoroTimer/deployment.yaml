@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pomodoro
+  namespace: pomodoro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pomodoro
+  template:
+    metadata:
+      labels:
+        app: pomodoro
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: website
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: website
+        configMap:
+          name: pomodoro-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pomodoro
+  namespace: pomodoro
+spec:
+  type: NodePort
+  selector:
+    app: pomodoro
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30808
+

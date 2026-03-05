@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: booklore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: lscr.io/linuxserver/mariadb:11.4.5
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "1001"
+            - name: TZ
+              value: Europe/Bratislava
+            - name: MYSQL_ROOT_PASSWORD
+              value: Pa$$w0rd 
+            - name: MYSQL_DATABASE
+              value: booklore
+            - name: MYSQL_USER
+              value: booklore
+            - name: MYSQL_PASSWORD
+              value: Pa$$w0rd
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - mountPath: /config
+              name: mariadb-config
+      volumes:
+        - name: mariadb-config
+          hostPath:
+            path: /services/booklore/config/mariadb
+            type: DirectoryOrCreate
+
